@@ -1,5 +1,5 @@
 import { DEFAULT_FIGURE, buildFigureGeometry, normalizeFigure } from './block-figure-engine.mjs';
-import { FEATURED_TRAIT_NAMES, TRAIT_NAMES, TRAIT_CATEGORIES, TRAIT_CATEGORY_LABELS, generateCharacterVariations, appearanceForSelection, makeGreeting, normalizePersonality } from './personality-character.mjs';
+import { FEATURED_TRAIT_NAMES, TRAIT_NAMES, TRAIT_CATEGORIES, TRAIT_CATEGORY_LABELS, WOMAN_STYLES, generateCharacterVariations, appearanceForSelection, makeGreeting, normalizePersonality, WOMAN_BODY_PRESETS } from './personality-character.mjs';
 import { applySuperheroIdentity, applySuperheroLookPreset, generateSuperheroVariations, getSuperheroEligibility, HERO_LOOK_PRESETS } from './superhero-engine.mjs';
 import { encodeQrText } from './qr-code.mjs';
 import { encodeAnimatedGif } from './gif-encoder.mjs';
@@ -22,6 +22,7 @@ let selectedQualities = [];
 let scoreTouched = new Set();
 let recipientName = '', senderName = '', generationSeed = 0, generated = null, heroGenerated = null, selectedBase = null, generatedGreeting = '', activeVariationGallery = 'standard';
 let superheroWasUnlocked = false;
+let currentCharacterStyle = 'any';
 let userCustomizedCharacter = false, customizationGuideShown = false;
 let yaw = .42, pitch = .10, zoom = 1, drag = null, toastTimer = 0, randomizeCount = 0;
 let firstShowSpinFrame = 0;
@@ -259,9 +260,46 @@ function updateSmileOptions(){
   if(label)label.textContent=teethOn?'Teeth enabled: only open-smile choices are available.':'Teeth off: all mouth styles are available.';
   const teethStyle=$('teethStyle');if(teethStyle)teethStyle.disabled=!teethOn;
 }
-function syncControls() {
+function applyAppearanceEditorMode(){
+  const isWoman=currentCharacterStyle==='woman';
   const facialHair=$('optional-facial-hair');
-  if(facialHair && (state.beard!=='none'||state.moustache!=='none')) facialHair.open=true;
+  if(facialHair){facialHair.hidden=isWoman;if(isWoman)facialHair.open=false;}
+  const quick=$('woman-style-shortcuts');if(quick)quick.hidden=!isWoman;
+  for(const option of $('hairstyle').options){
+    const allowed=!isWoman||WOMAN_STYLES.includes(option.value);
+    option.hidden=!allowed;
+    option.disabled=!allowed;
+  }
+  const hairLabel=document.querySelector('label[for="hairstyle"]');
+  if(hairLabel)hairLabel.textContent=isWoman?'Hairstyle · feminine looks':'Hair style';
+  const shortcutHair=$('woman-quick-hair');
+  if(shortcutHair && isWoman){
+    if(shortcutHair.options.length!==WOMAN_STYLES.length){
+      shortcutHair.replaceChildren();
+      for(const option of $('hairstyle').options){
+        if(!WOMAN_STYLES.includes(option.value))continue;
+        shortcutHair.add(new Option(option.textContent,option.value));
+      }
+    }
+    shortcutHair.value=WOMAN_STYLES.includes(state.hairstyle)?state.hairstyle:WOMAN_STYLES[0];
+  }
+  const shape=$('woman-body-preset');
+  if(shape&&isWoman){
+    const keys=['silhouette','build','height','shoulders','waistWidth','hipWidth','chestContour','armMuscle','legMuscle'];
+    const match=Object.entries(WOMAN_BODY_PRESETS).find(([,preset])=>keys.every(k=>state[k]===preset[k]));
+    shape.value=match?.[0]||'custom';
+  }
+  const note=$('studio-appearance-note');
+  if(note)note.textContent=isWoman
+    ? 'Woman’s character studio · feminine hairstyles and silhouettes · no beard or moustache controls.'
+    :currentCharacterStyle==='man'?'Man’s character studio · masculine starting looks.':
+       currentCharacterStyle==='diverse'?'Gender-diverse studio · mixed silhouettes and flexible appearance controls.':
+       'Flexible studio · choose the look you prefer.';
+}
+function syncControls() {
+  applyAppearanceEditorMode();
+  const facialHair=$('optional-facial-hair');
+  if(facialHair && currentCharacterStyle!=='woman' && (state.beard!=='none'||state.moustache!=='none')) facialHair.open=true;
   document.querySelectorAll('[data-key]').forEach(el=>{
     const key=el.dataset.key;if(!(key in state))return;
     if(el.type==='checkbox')el.checked=state[key];
@@ -328,7 +366,7 @@ function invalidateGifCache(){
   if(gifCardPoster)gifCardPoster.hidden=false;
 }
 function exportSettings() {
-  const file={schema:'goodmen-block-figure',version:2,recipient:recipientName,sender:senderName,appearance:state};
+  const file={schema:'goodmen-block-figure',version:2,recipient:recipientName,sender:senderName,recipientStyle:currentCharacterStyle,appearance:state};
   download(new Blob([JSON.stringify(file,null,2)],{type:'application/json'}),safeName(state.name)+'-figure.json');
 }
 function saveDraft() {
@@ -1267,6 +1305,7 @@ function generateOptions(preferredGallery='power') {
     const profile=normalizePersonality(selectedQualities);
     startNewCardShareId();
     const characterStyle=document.querySelector('input[name="recipient-character-style"]:checked')?.value||'any';
+    currentCharacterStyle=characterStyle;
     generated=generateCharacterVariations(profile,generationSeed,characterStyle);
     heroGenerated=getSuperheroEligibility(profile).unlocked
       ? generateSuperheroVariations(profile,generationSeed,DEFAULT_FIGURE)
@@ -1274,7 +1313,7 @@ function generateOptions(preferredGallery='power') {
     if(heroGenerated){
       heroGenerated.variations=heroGenerated.variations.map((hero,index)=>{
         const appearance=appearanceForSelection(characterStyle,index,generationSeed);
-        const {outfit:unusedSuggestedOutfit,...geometryAndHair}=appearance;
+        const {outfit:unusedSuggestedOutfit,bottoms:unusedSuggestedBottoms,footwear:unusedSuggestedFootwear,...geometryAndHair}=appearance;
         return {...hero,figure:normalizeFigure({...hero.figure,...geometryAndHair})};
       });
     }
@@ -1296,8 +1335,8 @@ function chooseVariation(variation) {
   document.querySelector('.control-panel')?.classList.add('customization-attention');
   $('customization-guide').hidden=true;
   syncControls();draw();
-  const clothing=$('outfit')?.closest('.control-section');
-  document.querySelectorAll('.control-panel .control-section').forEach(section=>{section.open=section===clothing;});
+  const featuredControl=(currentCharacterStyle==='woman' ? $('hairstyle') : $('outfit'))?.closest('.control-section');
+  document.querySelectorAll('.control-panel .control-section').forEach(section=>{section.open=section===featuredControl;});
   if(!customizationGuideShown){customizationGuideShown=true;}
   startIntroSpin();
   $('studio-grid').scrollIntoView?.({behavior:'smooth',block:'start'});
@@ -1342,6 +1381,18 @@ function randomizeCharacter() {
     pose:pick(['idle','wave','thumbs-up','hands-on-hips','flex','victory','welcome','dance','hand-over-heart','both-wave','pointing','peace','wide-stance','relaxed-lean']),handStyle:pick(['open','fist','thumbs-up','peace','point','mitten']),glasses:rng()>.5,sunglassesStyle:pick(['none','wayfarer','aviator','round','sport','oversized']),cap:rng()>.5,headwearStyle:pick(['none','beanie','brimmed-hat']),headphonesStyle:pick(['none','studio','wireless','sport','neckband']),bagStyle:pick(['none','backpack','shoulder-bag','sling-bag']),watch:rng()>.5,pin:false,
     topColor:pick(['#176A76','#244F91','#674EA3','#2369D4','#8B4D99','#2F675E']),accentColor:pick(['#F17B63','#F2A34A','#63B6A3','#F5C95D','#D8B579']),background:pick(['#F4F1EB','#E8F0F6','#F2E8E5','#EAF1E6']),
   };
+  if(currentCharacterStyle==='woman'){
+    const feminine=appearanceForSelection('woman',Math.floor(rng()*3),0);
+    Object.assign(randomLook,feminine,{
+      hairstyle:pick(WOMAN_STYLES),beard:'none',moustache:'none',
+      headShape:pick(['heart','oval','round']),jawline:pick(['soft','tapered']),eyeShape:pick(['round','wide']),
+      mouthStyle:'smile',teethVisible:false,noseScale:90,browStyle:'natural',
+      // The generated figure stays feminine even after pressing Randomize.
+      outfit:state.heroMode?'hero-suit':pick(['zf-polo-white','zf-polo-navy','cardigan','long-tunic','dress','blazer','tee','sweater']),
+      bottoms:pick(['chinos','formal-trousers','skirt','jeans']),
+      height:Math.floor(165+rng()*19),armMuscle:Math.floor(80+rng()*17),legMuscle:Math.floor(84+rng()*17)
+    });
+  }
   if(state.heroMode){
     const look=pick(Object.keys(HERO_LOOK_PRESETS));
     setState(applySuperheroLookPreset({...state,...randomLook},look));
@@ -1366,8 +1417,10 @@ function markCustomizationExplored(){
 function applyCharacterControl(key,value){
   stopIntroSpin();
   try{
+    if(currentCharacterStyle==='woman' && (key==='beard'||key==='moustache'))return;
+    if(currentCharacterStyle==='woman' && key==='hairstyle' && !WOMAN_STYLES.includes(value))return;
     if(key==='silhouette'){
-      const shapes={classic:{shoulders:100,waistWidth:100,hipWidth:100,chestContour:100},angular:{shoulders:110,waistWidth:103,hipWidth:96,chestContour:104},curved:{shoulders:92,waistWidth:86,hipWidth:115,chestContour:111},balanced:{shoulders:100,waistWidth:96,hipWidth:105,chestContour:103}};
+      const shapes={classic:{shoulders:100,waistWidth:100,hipWidth:100,chestContour:100},angular:{shoulders:110,waistWidth:103,hipWidth:96,chestContour:104},curved:{shoulders:86,waistWidth:81,hipWidth:123,chestContour:117},balanced:{shoulders:98,waistWidth:94,hipWidth:107,chestContour:104}};
       setState({silhouette:value,...shapes[value]});
     } else if(key==='heroLookPreset')setState(applySuperheroLookPreset(state,value));
     else setState({[key]:value});
@@ -1381,6 +1434,21 @@ document.addEventListener('input',event=>{
 });
 document.addEventListener('change',event=>{
   const el=event.target,key=el.dataset.key;
+  if(el.id==='woman-body-preset'){
+    if(currentCharacterStyle!=='woman')return;
+    if(el.value==='custom'){
+      const section=$('silhouette')?.closest('.control-section');
+      if(section){document.querySelectorAll('.control-panel .control-section').forEach(item=>item.open=item===section);section.scrollIntoView({behavior:'smooth',block:'nearest'});}
+      return;
+    }
+    const shape=WOMAN_BODY_PRESETS[el.value];if(!shape)return;
+    markCustomizationExplored();stopIntroSpin();setState(shape);
+    toast(`Body contour updated: ${el.selectedOptions[0]?.textContent||'new body shape'}`);return;
+  }
+  if(el.id==='woman-quick-hair'){
+    if(currentCharacterStyle!=='woman'||!WOMAN_STYLES.includes(el.value))return;
+    markCustomizationExplored();applyCharacterControl('hairstyle',el.value);return;
+  }
   if(!key){const preset=el.dataset.lookPreset?LOOK_PRESETS[el.value]:null;if(preset){markCustomizationExplored();setState(preset);el.value='';}return;}
   const value=el.type==='checkbox'?el.checked:el.type==='range'?Number(el.value):el.value;
   markCustomizationExplored();
@@ -1482,6 +1550,10 @@ $('state-file').addEventListener('change',async event=>{
     const loaded=JSON.parse(await file.text());
     if(loaded.schema!=='goodmen-block-figure'||loaded.version!==2||!loaded.appearance)throw Error('Unsupported settings file; load a personality-first version 2 file.');
     state=normalizeFigure(loaded.appearance);
+    currentCharacterStyle=['woman','man','diverse','any'].includes(loaded.recipientStyle)
+      ? loaded.recipientStyle : 'any';
+    const savedStyle=document.querySelector(`input[name="recipient-character-style"][value="${currentCharacterStyle}"]`);
+    if(savedStyle)savedStyle.checked=true;
     const scoredQualities=normalizePersonality(state.personalityProfile?.qualities);
     state=normalizeFigure({...state,personalityProfile:{...state.personalityProfile,qualities:scoredQualities}});
     selectedQualities=scoredQualities.map(q=>({...q}));

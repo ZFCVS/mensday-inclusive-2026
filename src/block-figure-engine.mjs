@@ -39,7 +39,7 @@ const enums = {
   sunglassesStyle: ['none','wayfarer','aviator','round','sport','oversized'],
   headphonesStyle: ['none','studio','wireless','sport','neckband'],
   bagStyle: ['none','backpack','shoulder-bag','sling-bag'],
-  hairstyle: ['bald', 'buzz', 'crop', 'quiff', 'curls', 'locs', 'long', 'fade', 'side-part', 'fringe', 'spiky', 'afro', 'mullet', 'flowing','bun','braid','ponytail','layered'],
+  hairstyle: ['bald', 'buzz', 'crop', 'quiff', 'curls', 'locs', 'long', 'fade', 'side-part', 'fringe', 'spiky', 'afro', 'mullet', 'flowing','bun','braid','ponytail','layered','pixie','bob','wavy-bob','lob','long-waves','sleek-straight','high-ponytail','twin-braids','side-braid','half-up','messy-bun','curtain-bangs','shoulder-curls','crown-braid'],
   beard: ['none', 'light-stubble', 'stubble', 'short', 'full', 'goatee', 'anchor', 'soul-patch', 'chinstrap', 'sideburns'],
   moustache: ['none', 'pencil', 'classic', 'chevron', 'handlebar', 'walrus', 'horseshoe'],
   teethStyle: ['even', 'small', 'individual', 'gap'],
@@ -230,7 +230,10 @@ export function buildFigureGeometry(input = {}) {
   };
   const heightScale = s.height / 182, legScale = s.legRatio / 100;
   const baseBody = BUILD[s.build];
-  const body = {...baseBody,hip:baseBody.hip*(s.hipWidth/100),thigh:baseBody.thigh*(.9+s.hipWidth/100*.10)};
+  const isCurved=s.silhouette==='curved';
+  // Curve the pelvis and waist as *geometry*, not merely a narrow shirt texture.
+  // The classic/old-card path retains its original measurements.
+  const body = {...baseBody,hip:baseBody.hip*(s.hipWidth/100)*(isCurved?1.18:1),thigh:baseBody.thigh*(.9+s.hipWidth/100*.10)};
   const skin = s.skin, accent = s.accentColor;
   const top = s.heroMode ? s.topColor : s.outfit === 'zf-polo-white' ? '#FFFFFF' : s.outfit === 'zf-polo-navy' ? '#0A2042' : s.topColor;
   const torsoW = body.torso * (s.shoulders / 100) * (1+s.belly/360);
@@ -325,7 +328,7 @@ export function buildFigureGeometry(input = {}) {
   // Waist and torso layers.
   add('waist', 0, 2.12, 0, body.hip, .48, .72, s.pantsColor, 'trousers');
   if(s.bottoms==='skirt' && s.outfit!=='dress'){
-    addTaperedHead('skirt_panel',0,2.00,.025,waistW*.99,body.hip*1.27,1.35,.84,s.pantsColor,'skirt');
+    addTaperedHead('skirt_panel',0,2.00,.025,Math.min(waistW,body.hip*.78),body.hip*1.27,1.35,.84,s.pantsColor,'skirt');
     add('skirt_hem',0,1.34,.035,body.hip*1.27,.09,.86,shade(s.pantsColor,-.075),'skirt');
   }
   if(s.heroMode&&s.heroCapeStyle!=='none'){
@@ -352,8 +355,30 @@ export function buildFigureGeometry(input = {}) {
       if(s.heroCapeStyle==='long')[-1,1].forEach(side=>add('hero_cape_hem_'+side,side*torsoW*.43,2.30,capeBack-.015,torsoW*.15,.46,.14,shade(s.heroCapeColor,-.12),'hero-cape',side*(.09+phase*wind)));
     }
   }
-  // Legacy (100%) silhouettes use the original cuboid for identical old-card rendering.
-  if(s.waistWidth===100 && s.chestContour===100) add('shirt_body', 0, 3.23, .01, torsoW, 1.75, .86, top, 'top');
+  // Multi-zone shaped torso. The classic/legacy path is untouched to preserve existing cards.
+  if(isCurved){
+    // Five connected, tapered cross-sections create a visible bust → ribcage → waist → hip curve.
+    // All dimensions derive from already serialized fields; no new card-link fields are necessary.
+    const chestW=torsoW*.96;
+    const ribW=torsoW*.88;
+    const definedWaist=Math.min(waistW*.91,torsoW*.76);
+    const pelvisW=body.hip*.94;
+    addTaperedHead('shape_shoulder',0,3.99,.005,torsoW*.91,chestW,.37,chestDepth*.95,top,'top');
+    addTaperedHead('shape_chest',0,3.59,.005,chestW,ribW,.47,chestDepth,top,'top');
+    addTaperedHead('shape_ribcage',0,3.16,.005,ribW,definedWaist,.40,chestDepth*.90,top,'top');
+    addTaperedHead('shape_waist',0,2.79,.005,definedWaist,pelvisW*.86,.40,chestDepth*.85,top,'top');
+    // The hip/pelvis overlap is deliberately continuous to avoid a square belt-like transition.
+    if(!['dress','long-tunic'].includes(s.outfit)){
+      addTaperedHead('shape_high_hip',0,2.43,.0,pelvisW*.86,pelvisW,.36,.82,s.pantsColor,'trousers');
+      addTaperedHead('shape_low_hip',0,2.17,.0,pelvisW,body.hip,.30,.78,s.pantsColor,'trousers');
+    }
+    // Subtle, integrated front chest contour: keep the left-chest ZF emblem unobscured.
+    // Do not draw separate bright/light patches that resemble unrelated accessories.
+    const profile=(s.chestContour-85)/40;
+    if(profile>.18 && !['dress','long-tunic'].includes(s.outfit)){
+      [-1,1].forEach(side=>addTaperedHead('shape_chest_volume_'+side,side*chestW*.225,3.53,chestDepth*.50-.075,chestW*.38,chestW*.32,.30,.17+profile*.08,top,'top'));
+    }
+  } else if(s.waistWidth===100 && s.chestContour===100) add('shirt_body', 0, 3.23, .01, torsoW, 1.75, .86, top, 'top');
   else addTaperedHead('shirt_body',0,3.23,.01,torsoW,waistW,1.75,chestDepth,top,'top');
   add('neck', 0, 4.30, .06, .47, .55, .46, skin, 'skin');
   add('collar_back', 0, 4.05, .08, .66, .24, .53, shade(top,-.05), 'top');
@@ -408,7 +433,9 @@ export function buildFigureGeometry(input = {}) {
     }
   } else if(s.outfit==='long-tunic' || s.outfit==='dress'){
     const isDress=s.outfit==='dress';
-    addTaperedHead(isDress?'dress_upper':'tunic_upper',0,3.16,.04,torsoW*.96,waistW*.96,1.76,chestDepth+.06,top,'top');
+    // Fitted garment follows the torso geometry instead of masking the waist with a box.
+    addTaperedHead(isDress?'dress_chest':'tunic_chest',0,3.70,.04,torsoW*.96,torsoW*.89,.78,chestDepth+.05,top,'top');
+    addTaperedHead(isDress?'dress_waist':'tunic_waist',0,2.88,.04,torsoW*.89,Math.min(waistW*.92,torsoW*.79),.92,chestDepth+.04,top,'top');
     addTaperedHead(isDress?'dress_skirt':'tunic_lower',0,isDress?1.90:2.39,.04,waistW*.94,body.hip*(isDress?1.25:1.02),isDress?1.65:.88,.91,top,'top');
     if(isDress) add('dress_hem',0,1.10,.055,body.hip*1.24,.11,.94,shade(top,-.08),'details');
     add('tunic_neck_trim',0,4.01,.53,.50,.09,.08,accent,'details');
@@ -434,7 +461,8 @@ export function buildFigureGeometry(input = {}) {
     add('bomber_waist',0,2.42,.01,torsoW,.16,.92,accent,'details');
   } else if (s.outfit === 'blazer') {
     [-1,1].forEach(side=>{
-      add('blazer_panel_'+side,side*.43,3.22,.49,.79,1.66,.14,top,'top');
+      if(isCurved)addTaperedHead('blazer_panel_'+side,side*torsoW*.26,3.22,.49,torsoW*.51,Math.min(waistW*.54,torsoW*.40),1.66,.14,top,'top');
+      else add('blazer_panel_'+side,side*.43,3.22,.49,.79,1.66,.14,top,'top');
       add('blazer_lapel_'+side,side*.19,3.70,.59,.28,.53,.07,accent,'details',side*.23);
       add('blazer_button_'+side,side*.24,2.84,.62,.07,.07,.04,shade(accent,-.14),'details');
     });
@@ -462,7 +490,9 @@ export function buildFigureGeometry(input = {}) {
     [-1,1].forEach(side=>add('sweater_cuff_'+side,side*.49,2.40,.02,.68,.16,.75,shade(top,-.12),'details'));
     for(let j=0;j<3;j++) add('sweater_stitch_'+j,0,3.34+j*.14,.454,torsoW*.74,.025,.025,shade(top,.13),'details');
   } else if (s.outfit === 'cardigan') {
-    [-1,1].forEach(side=>add('cardigan_front_'+side,side*.39,3.20,.48,.77,1.60,.14,top,'top'));
+    [-1,1].forEach(side=>isCurved
+      ? addTaperedHead('cardigan_front_'+side,side*torsoW*.26,3.20,.48,torsoW*.52,Math.min(waistW*.52,torsoW*.40),1.60,.14,top,'top')
+      : add('cardigan_front_'+side,side*.39,3.20,.48,.77,1.60,.14,top,'top'));
     add('cardigan_inner_shirt',0,3.34,.55,.54,1.27,.12,shade(top,.30),'details');
     [-1,1].forEach(side=>add('cardigan_edge_'+side,side*.11,3.20,.58,.09,1.56,.06,shade(top,-.18),'details'));
     for(let j=0;j<4;j++) add('cardigan_button_'+j,-.01,2.74+j*.34,.62,.06,.06,.035,accent,'details');
@@ -602,11 +632,19 @@ export function buildFigureGeometry(input = {}) {
   addTaperedHead('head',0,headY,headZ,headTopWidth,headBottomWidth,hh,hd,skin);
   [-1,1].forEach(side=>add('ear_'+side,side*(hw*.51),headY-.02,.02,.22*H,.31*H,.42*H,skin,'face'));
   const eyeY=headY+.12*H, eyeX=hw*.205, faceZ=headZ+hd*.52+.055;
+  // Stylised soft-face detail for the curved presentation; not applied to older cards.
+  if(isCurved){
+    [-1,1].forEach(side=>{
+      add('cheek_contour_'+side,side*hw*.35,headY-.26*H,faceZ-.015,.23*H,.20*H,.035,shade(skin,.035),'face');
+      add('upper_lash_'+side,side*(eyeX+.115*H),eyeY+.11*H,faceZ+.145,.13*H,.045*H,.033,shade(s.hairColor,-.10),'eyes',side*.24);
+    });
+  }
   const expressiveEyes={
     excited:[.26,.23],joyful:[.23,.12],laughing:[.23,.10],astonished:[.27,.25],determined:[.26,.095],playful:[.23,.18]
   };
   const eyeDim=expressiveEyes[s.expression]||({classic:[.22,.16],round:[.18,.19],narrow:[.25,.10],wide:[.25,.19]}[s.eyeShape]);
-  const browDim={natural:[.29,.075],bold:[.31,.11],raised:[.29,.075],angled:[.29,.075]}[s.browStyle];
+  const baseBrowDim={natural:[.29,.075],bold:[.31,.11],raised:[.29,.075],angled:[.29,.075]}[s.browStyle];
+  const browDim=isCurved?[baseBrowDim[0]*.87,baseBrowDim[1]*.76]:baseBrowDim;
   const noseScale=s.noseScale/100, smile=s.smileIntensity/100;
   const blink=clamp(Number(s.blink)||0,0,1);
   [-1,1].forEach(side=>{
@@ -761,21 +799,93 @@ export function buildFigureGeometry(input = {}) {
         add('long_back_'+side,side*hw*.25,headY-.18,-hd*.37,.24*H,.74*H,.23,hair,'hair');
       });
       add('long_fringe',0,topY-.10,headZ+hd*.48,.72*H,.16*H,.13,hair,'hair');
+      if(isCurved)[-1,1].forEach(side=>add('long_shoulder_cascade_'+side,side*hw*.48,headY-.92*H,.10,.27*H,.87*H,.46*H,hair,'hair',side*.06));
     } else if(s.hairstyle==='bun'){
       add('bun_crown',0,topY+.07,headZ-.07,hw*.88,.20*H,hd*.86,hair,'hair');
       add('bun_back',0,topY+.14,headZ-hd*.64,.48*H,.45*H,.43*H,shade(hair,-.03),'hair');
+      [-1,1].forEach(side=>add('bun_face_framing_'+side,side*hw*.46,headY+.08*H,headZ+hd*.31,.16*H,.60*H,.17*H,hair,'hair'));
     } else if(s.hairstyle==='braid'){
       add('braid_crown',0,topY+.06,headZ,.94*hw,.24*H,.88*hd,hair,'hair');
       for(let i=0;i<5;i++)add('braid_'+i,.22*H,headY+.14*H-i*.17*H,headZ-hd*.60,.23*H,.19*H,.26*H,i%2?shade(hair,.05):hair,'hair');
+      [-1,1].forEach(side=>add('braid_side_fringe_'+side,side*hw*.45,headY+.03*H,headZ+hd*.31,.18*H,.58*H,.18*H,hair,'hair'));
     } else if(s.hairstyle==='ponytail'){
       add('ponytail_crown',0,topY+.06,headZ,.94*hw,.23*H,.90*hd,hair,'hair');
       add('ponytail_tie',0,headY+.46*H,headZ-hd*.62,.27*H,.14*H,.21*H,shade(hair,-.12),'hair');
       add('ponytail_tail',0,headY-.04*H,headZ-hd*.69,.31*H,.90*H,.24*H,hair,'hair');
+      [-1,1].forEach(side=>add('ponytail_face_framing_'+side,side*hw*.45,headY+.02*H,headZ+hd*.30,.17*H,.62*H,.20*H,hair,'hair'));
     } else if(s.hairstyle==='layered'){
       add('layered_crown',0,topY+.08,headZ,.96*hw,.24*H,.88*hd,hair,'hair');
       [-1,1].forEach(side=>{
         add('layered_side_'+side,side*hw*.43,headY+.01*H,.015,.25*H,.78*H,.55*H,hair,'hair',side*.04);
         add('layered_lower_'+side,side*hw*.44,headY-.31*H,-hd*.16,.30*H,.42*H,.37*H,shade(hair,.06),'hair',side*.06);
+      });
+      if(isCurved)[-1,1].forEach(side=>add('layered_shoulder_length_'+side,side*hw*.46,headY-.83*H,.11,.34*H,.95*H,.48*H,hair,'hair',side*.05));
+    } else if(s.hairstyle==='pixie'){
+      add('pixie_swept_top',-.07*H,topY+.10*H,headZ+.23*H,.94*hw,.24*H,.80*hd,hair,'hair',-.12);
+      add('pixie_side_sweep',-.25*H,topY-.065*H,headZ+hd*.48,.46*H,.21*H,.19*H,shade(hair,.06),'hair',-.18);
+      [-1,1].forEach(side=>add('pixie_soft_temple_'+side,side*hw*.47,headY+.22*H,.03,.16*H,.44*H,.44*H,hair,'hair'));
+    } else if(s.hairstyle==='bob' || s.hairstyle==='wavy-bob'){
+      const wave=s.hairstyle==='wavy-bob';
+      add('bob_crown',0,topY+.06,headZ,.98*hw,.26*H,.91*hd,hair,'hair');
+      [-1,1].forEach(side=>{
+        add('bob_side_'+side,side*hw*.50,headY-.17*H,.02,.26*H,.89*H,.57*H,hair,'hair',side*(wave?.08:0));
+        add('bob_chin_'+side,side*hw*.47,headY-.54*H,.15,.31*H,.27*H,.44*H,shade(hair,wave?.08:-.04),'hair',side*(wave?-.11:0));
+        if(wave)for(let i=0;i<3;i++)add('bob_wave_'+side+'_'+i,side*(hw*.53+(i%2)*.065*H),headY+(.06-i*.23)*H,.24,.15*H,.24*H,.20*H,shade(hair,i%2?.10:-.04),'hair',side*(i%2?.13:-.10));
+      });
+      add('bob_part',-.16*H,topY-.07,headZ+hd*.52,.48*H,.12*H,.15*H,shade(hair,.07),'hair',-.15);
+    } else if(s.hairstyle==='lob' || s.hairstyle==='sleek-straight'){
+      const sleek=s.hairstyle==='sleek-straight',fall=sleek?1.85:1.17;
+      add('lob_crown',0,topY+.06,headZ,.98*hw,.23*H,.90*hd,hair,'hair');
+      [-1,1].forEach(side=>{
+        add('lob_side_'+side,side*hw*.49,headY-.29*H,.01,.22*H,fall*H,.53*H,hair,'hair',side*(sleek?0:.04));
+        add('lob_end_'+side,side*hw*.50,headY-(sleek?1.11:.70)*H,.09,.28*H,.21*H,.40*H,shade(hair,.055),'hair');
+      });
+      add('lob_part',0,topY-.08,headZ+hd*.52,.16*H,.16*H,.13*H,shade(hair,.07),'hair');
+    } else if(s.hairstyle==='long-waves' || s.hairstyle==='curtain-bangs'){
+      const bangs=s.hairstyle==='curtain-bangs';
+      add('waves_crown',0,topY+.05,headZ,hw*.98,.25*H,.92*hd,hair,'hair');
+      [-1,1].forEach(side=>{
+        for(let i=0;i<5;i++){
+          const shift=(i%2?-.075:.065)*H;
+          add('waves_lock_'+side+'_'+i,side*(hw*.52+shift),headY+(.20-i*.29)*H,.17,.29*H,.39*H,.44*H,shade(hair,i%2?.09:-.035),'hair',side*(i%2?.12:-.08));
+        }
+        if(bangs)add('curtain_fringe_'+side,side*.22*H,topY-.21*H,headZ+hd*.55,.33*H,.40*H,.19*H,shade(hair,.05),'hair',side*-.21);
+      });
+    } else if(s.hairstyle==='high-ponytail' || s.hairstyle==='half-up'){
+      const half=s.hairstyle==='half-up';
+      add('high_crown',0,topY+.09,headZ,hw*.98,.24*H,.90*hd,hair,'hair');
+      add('high_tie',0,topY+.06,headZ-hd*.69,.27*H,.14*H,.23*H,shade(hair,-.14),'hair');
+      add('high_tail',0,headY+.21*H,headZ-hd*.77,.35*H,1.00*H,.29*H,hair,'hair');
+      [-1,1].forEach(side=>{
+        add('high_face_'+side,side*hw*.48,headY+.29*H,headZ+hd*.16,.16*H,.48*H,.26*H,hair,'hair');
+        if(half)add('half_down_'+side,side*hw*.51,headY-.43*H,.03,.27*H,1.30*H,.40*H,hair,'hair');
+      });
+      // The tied hair must also read in a front-facing card: show a side sweep
+      // and off-centre falling tail instead of hiding every strand behind the head.
+      add('high_side_sweep',-.27*H,topY-.12*H,headZ+hd*.55,.52*H,.24*H,.21*H,shade(hair,.05),'hair',-.16);
+      if(!half){
+        add('high_side_tail_upper',-hw*.67,headY-.30*H,headZ+hd*.23,.29*H,.66*H,.33*H,hair,'hair',-.10);
+        add('high_side_tail_lower',-hw*.70,headY-.80*H,headZ+hd*.24,.27*H,.55*H,.31*H,shade(hair,.055),'hair',-.07);
+      }
+    } else if(s.hairstyle==='twin-braids' || s.hairstyle==='side-braid' || s.hairstyle==='crown-braid'){
+      const twin=s.hairstyle==='twin-braids',crown=s.hairstyle==='crown-braid';
+      add('plait_crown',0,topY+.08,headZ,hw,.26*H,.90*hd,hair,'hair');
+      for(const side of twin?[-1,1]:[1]){
+        for(let i=0;i<6;i++){
+          const x=side*(hw*.58+(i>2?.10:.01)*H),y=headY+(.05-i*.23)*H;
+          add('plait_'+side+'_'+i,x,y,headZ+hd*.28,.25*H,.22*H,.27*H,shade(hair,i%2?.10:-.05),'hair',side*(i%2?.18:-.16));
+        }
+        add('plait_tip_'+side,side*(hw*.68),headY-1.31*H,headZ+hd*.28,.16*H,.19*H,.20*H,shade(hair,-.09),'hair');
+      }
+      if(crown){for(let i=-3;i<=3;i++)add('crown_plait_'+i,i*.16*H,topY+.20*H+(3-Math.abs(i))*.025*H,headZ+hd*.31,.20*H,.20*H,.24*H,shade(hair,i%2?.07:-.04),'hair');}
+    } else if(s.hairstyle==='messy-bun'){
+      add('messy_crown',0,topY+.07,headZ,hw*.92,.24*H,.88*hd,hair,'hair');
+      for(let i=0;i<7;i++){const x=(i-3)*.15*H;add('messy_bun_'+i,x,topY+(.27+(i%3)*.09)*H,headZ-hd*.30,.23*H,.23*H,.23*H,shade(hair,i%2?.10:-.06),'hair',i*.13);}
+      [-1,1].forEach(side=>add('messy_face_strand_'+side,side*hw*.49,headY+.11*H,headZ+hd*.30,.13*H,.63*H,.17*H,hair,'hair',side*.09));
+    } else if(s.hairstyle==='shoulder-curls'){
+      add('shoulder_curl_crown',0,topY+.09,headZ,hw*.96,.24*H,.92*hd,hair,'hair');
+      [-1,1].forEach(side=>{
+        for(let i=0;i<4;i++)for(let j=0;j<2;j++)add('shoulder_curl_'+side+'_'+i+'_'+j,side*(hw*.46+j*.11*H),headY+(.26-i*.30)*H,headZ+hd*.15,.25*H,.25*H,.29*H,shade(hair,(i+j)%2?.10:-.05),'hair');
       });
     } else if(s.hairstyle==='fade'){
       add('fade_top',0,topY+.08,-.01,.88*H,.25*H,.75*H,hair,'hair');
@@ -808,8 +918,18 @@ export function buildFigureGeometry(input = {}) {
       [-1,1].forEach(side=>{
         add('flowing_side_'+side,side*hw*.46,headY-.04*H,.025,.25*H,.86*H,.54*H,hair,'hair',side*.025);
         add('flowing_front_'+side,side*.22*H,topY-.12,headZ+hd*.53,.34*H,.29*H,.17,(side<0?shade(hair,.06):hair),'hair',side*-.18);
+        if(isCurved)add('flowing_shoulder_length_'+side,side*hw*.46,headY-.91*H,.07,.32*H,.93*H,.49*H,hair,'hair',side*.05);
       });
     }
+  }
+  // Side locks placed in front of the shoulders are visible from the card's front view.
+  // They sit outside the left-chest ZF emblem rather than covering it.
+  if(isCurved && ['long','layered','flowing','braid','ponytail'].includes(s.hairstyle)){
+    const fall=s.hairstyle==='flowing'||s.hairstyle==='long'?1.08:.78;
+    [-1,1].forEach(side=>{
+      add('shoulder_hair_upper_'+side,side*hw*.56,headY-.36*H,.27,.29*H,.65*H,.42*H,hair,'hair',side*.045);
+      add('shoulder_hair_lower_'+side,side*hw*.58,headY-.82*H,.38,.30*H,fall*H,.39*H,shade(hair,.025),'hair',side*.055);
+    });
   }
   if(s.beard!=='none'){
     const fz=faceZ+.105, softBeard=mix(skin,beardColor,.68);

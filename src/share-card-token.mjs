@@ -29,7 +29,7 @@ const ENUMS={
   browStyle:['natural','bold','raised','angled'],headwearStyle:['none','beanie','brimmed-hat'],
   sunglassesStyle:['none','wayfarer','aviator','round','sport','oversized'],
   headphonesStyle:['none','studio','wireless','sport','neckband'],bagStyle:['none','backpack','shoulder-bag','sling-bag'],
-  hairstyle:['bald','buzz','crop','quiff','curls','locs','long','fade','side-part','fringe','spiky','afro','mullet','flowing','bun','braid','ponytail','layered'],
+  hairstyle:['bald','buzz','crop','quiff','curls','locs','long','fade','side-part','fringe','spiky','afro','mullet','flowing','bun','braid','ponytail','layered','pixie','bob','wavy-bob','lob','long-waves','sleek-straight','high-ponytail','twin-braids','side-braid','half-up','messy-bun','curtain-bangs','shoulder-curls','crown-braid'],
   beard:['none','light-stubble','stubble','short','full','goatee','anchor','soul-patch','chinstrap','sideburns'],
   moustache:['none','pencil','classic','chevron','handlebar','walrus','horseshoe'],teethStyle:['even','small','individual','gap'],
   mouthStyle:['auto','closed','smile','open','grin','laugh','wide-grin','pursed'],
@@ -48,7 +48,7 @@ const ENUMS={
 const VERSION6_ENUMS={...ENUMS,
   outfit:ENUMS.outfit.filter(value=>!['long-tunic','dress'].includes(value)),
   bottoms:ENUMS.bottoms.filter(value=>value!=='skirt'),
-  hairstyle:ENUMS.hairstyle.filter(value=>!['bun','braid','ponytail','layered'].includes(value))
+  hairstyle:ENUMS.hairstyle.filter(value=>!['bun','braid','ponytail','layered','pixie','bob','wavy-bob','lob','long-waves','sleek-straight','high-ponytail','twin-braids','side-braid','half-up','messy-bun','curtain-bangs','shoulder-curls','crown-braid'].includes(value))
 };
 const VERSION4_ENUMS={...VERSION6_ENUMS,outfit:VERSION6_ENUMS.outfit.filter(value=>value!=='hero-suit')};
 const LEGACY_ENUMS={...VERSION4_ENUMS,cardScene:['truck','bus','car','train','truck-front-left','truck-front-right','coach-bus']};

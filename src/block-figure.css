@@ -544,3 +544,18 @@ body{font-size:16px;background:radial-gradient(ellipse at 50% -12%,#fff 0,#F4F8F
 .optional-facial-hair>summary{cursor:pointer;font-size:14px;font-weight:600;color:#0b315a;margin-bottom:0}
 .optional-facial-hair[open]>summary{margin-bottom:14px}
 @media(max-width:620px){.character-choice-fieldset{padding:14px}.character-choice-options{grid-template-columns:1fr}}
+
+/* V22 woman-character studio: contextual editing, not a men-only control stack. */
+#studio-appearance-note.studio-appearance-note{margin:9px 0 1px;padding:10px 12px;background:#eaf4ff;border:1px solid #c6d9ee;border-radius:9px;color:#17416a;font:400 12px/1.5 'ZF Prometo',Arial,sans-serif}
+#optional-facial-hair[hidden]{display:none!important}
+#hairstyle option[hidden]{display:none!important}
+
+/* V22 women's body / hair quick controls (desktop and mobile). */
+#woman-style-shortcuts[hidden]{display:none!important}
+#woman-style-shortcuts.woman-style-shortcuts{margin:12px 17px 14px;padding:15px 14px;border:1px solid #8bb8df;border-radius:13px;background:linear-gradient(135deg,#f1f8ff 0%,#fff 90%);box-shadow:0 2px 9px rgba(10,77,145,.06)}
+.woman-shortcut-heading{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.woman-shortcut-heading strong{font:500 17px/1.2 'ZF Prometo',Arial,sans-serif;color:#0a4d91}
+.woman-shortcut-heading span,.woman-shortcut-note{font:400 12px/1.4 'ZF Prometo',Arial,sans-serif;color:#536d87}
+.woman-shortcut-note{margin:11px 0 0}
+#woman-style-shortcuts select{width:100%;min-height:42px;font:400 14px/1.3 'ZF Prometo',Arial,sans-serif}
+@media(max-width:760px){#woman-style-shortcuts.woman-style-shortcuts{margin:10px 13px 14px}}

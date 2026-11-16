@@ -135,21 +135,39 @@ function derivedExpression(signals) {
 
 /** Appearance suggestions, NOT assertions about anyone's identity.
  * The actual shared card stores only rendered figure proportions and styling. */
+export const WOMAN_STYLES = Object.freeze(["long-waves","wavy-bob","high-ponytail","bob","lob","sleek-straight","twin-braids","side-braid","half-up","messy-bun","curtain-bangs","shoulder-curls","crown-braid","layered","flowing","long","ponytail","braid","bun","curls","afro","locs","pixie"]);
+// Presentation presets are styling choices, not a claim about a person's gender or anatomy.
+// Presets use existing visual fields so V7 saved cards and QR links remain compatible.
+export const WOMAN_BODY_PRESETS = Object.freeze({
+  petite: Object.freeze({silhouette:'curved',build:'lean',height:164,shoulders:85,waistWidth:88,hipWidth:111,chestContour:106,armMuscle:83,legMuscle:84}),
+  balanced: Object.freeze({silhouette:'curved',build:'average',height:172,shoulders:91,waistWidth:88,hipWidth:115,chestContour:111,armMuscle:90,legMuscle:92}),
+  hourglass: Object.freeze({silhouette:'curved',build:'average',height:174,shoulders:88,waistWidth:78,hipWidth:125,chestContour:121,armMuscle:88,legMuscle:94}),
+  pear: Object.freeze({silhouette:'curved',build:'average',height:170,shoulders:83,waistWidth:86,hipWidth:125,chestContour:105,armMuscle:86,legMuscle:96}),
+  athletic: Object.freeze({silhouette:'curved',build:'athletic',height:177,shoulders:98,waistWidth:85,hipWidth:114,chestContour:113,armMuscle:99,legMuscle:103}),
+  full: Object.freeze({silhouette:'curved',build:'stocky',height:168,shoulders:94,waistWidth:102,hipWidth:125,chestContour:120,armMuscle:99,legMuscle:102}),
+  tall: Object.freeze({silhouette:'curved',build:'lean',height:190,shoulders:91,waistWidth:81,hipWidth:118,chestContour:111,armMuscle:88,legMuscle:90})
+});
+/** Three distinct visual starting designs per presentation, never inferred from name.
+ * The label guides the initial look and is never embedded in shared card links. */
 export function appearanceForSelection(selection='any', index=0, seed=0) {
-  const types = {
-    man:['angular','angular','angular'],
-    woman:['curved','curved','curved'],
-    diverse:['balanced','curved','angular'],
-    any:['angular','curved','balanced']
-  };
-  const family=(types[selection]||types.any)[index%3];
-  const shape={
-    angular:{silhouette:'angular',shoulders:[109,102,116],waistWidth:[103,96,108],hipWidth:[95,101,93],chestContour:[101,102,108],hair:['crop','curls','side-part'],clothes:['zf-polo-navy','overshirt','blazer']},
-    curved:{silhouette:'curved',shoulders:[88,93,98],waistWidth:[84,90,87],hipWidth:[116,110,120],chestContour:[113,107,111],hair:['bun','layered','braid'],clothes:['zf-polo-white','cardigan','long-tunic']},
-    balanced:{silhouette:'balanced',shoulders:[99,94,104],waistWidth:[95,100,92],hipWidth:[105,100,109],chestContour:[104,100,108],hair:['ponytail','flowing','quiff'],clothes:['zf-polo-navy','hoodie','sweater']}
-  }[family];
-  const variant=(seed+index)%3;
-  return {silhouette:shape.silhouette,shoulders:shape.shoulders[variant],waistWidth:shape.waistWidth[variant],hipWidth:shape.hipWidth[variant],chestContour:shape.chestContour[variant],hairstyle:shape.hair[variant],outfit:shape.clothes[index%3],beard:'none',moustache:'none'};
+  const women = [
+    {...WOMAN_BODY_PRESETS.hourglass,headShape:'heart',jawline:'soft',eyeShape:'round',hairstyle:'long-waves',outfit:'zf-polo-white',bottoms:'chinos',footwear:'sneaker'},
+    {...WOMAN_BODY_PRESETS.pear,headShape:'oval',jawline:'tapered',eyeShape:'wide',hairstyle:'wavy-bob',outfit:'cardigan',bottoms:'skirt',footwear:'loafer'},
+    {...WOMAN_BODY_PRESETS.petite,headShape:'heart',jawline:'soft',eyeShape:'round',hairstyle:'high-ponytail',outfit:'blazer',bottoms:'formal-trousers',footwear:'dress-shoe'}
+  ];
+  const men = [
+    {silhouette:'angular',build:'athletic',height:183,shoulders:111,waistWidth:102,hipWidth:94,chestContour:103,headShape:'square',jawline:'defined',hairstyle:'crop',outfit:'zf-polo-navy',bottoms:'chinos'},
+    {silhouette:'angular',build:'average',height:178,shoulders:106,waistWidth:98,hipWidth:98,chestContour:101,headShape:'classic',jawline:'angular',hairstyle:'curls',outfit:'overshirt',bottoms:'jeans'},
+    {silhouette:'angular',build:'broad',height:185,shoulders:110,waistWidth:104,hipWidth:96,chestContour:107,headShape:'square',jawline:'defined',hairstyle:'side-part',outfit:'blazer',bottoms:'formal-trousers'}
+  ];
+  const balanced = [
+    {silhouette:'balanced',build:'average',height:178,shoulders:97,waistWidth:96,hipWidth:109,chestContour:104,headShape:'oval',jawline:'soft',hairstyle:'ponytail',outfit:'zf-polo-navy',bottoms:'chinos'},
+    women[2], men[1]
+  ];
+  const range = selection==='woman'?women:selection==='man'?men:selection==='diverse'?balanced:[men[0],women[1],balanced[0]];
+  // Rotate, never replace, the three designs when Regenerate is chosen.
+  const chosen=range[(index+Math.abs(seed)%3)%3];
+  return {...chosen,beard:'none',moustache:'none',...(selection==='woman'?{teethVisible:false,mouthStyle:'smile',noseScale:90,browStyle:'natural'}:{})};
 }
 
 export function generateCharacterVariations(qualities, seed = 0, selection = 'any') {
@@ -182,16 +200,14 @@ export function generateCharacterVariations(qualities, seed = 0, selection = 'an
     const accent = palette[1];
     const figure = normalizeFigure({
       ...DEFAULT_FIGURE,
-      ...appearance,
       name,
       tagline: index === 0 ? baseStyle.tagline : chosenStyle.tagline,
       qualities: profile.qualities.map(q=>q.trait).join(', '),
       skin: DEFAULT_FIGURE.skin,
       age: DEFAULT_FIGURE.age,
-      build: DEFAULT_FIGURE.build,
-      height: DEFAULT_FIGURE.height,
-      headShape: DEFAULT_FIGURE.headShape,
+      ...appearance,
       beard: 'none',
+      moustache:'none',
       hairstyle: selectedHair,
       expression: expressionResult.expression,
       smileIntensity: expressionResult.smileIntensity,

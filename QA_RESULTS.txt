@@ -1,0 +1,13 @@
+V22 Women Body Shapes & Hairstyle Release - QA Summary
+SOURCE: latest checked GitHub repository ZFCVS/mensday-inclusive-2026, plus cumulative last women's-fix baseline.
+
+PASS: Node JS syntax on all five JavaScript/module files
+PASS: 66 node generation, geometry, old-field-layout and new V7 card-link round-trip cases
+PASS: All 32 HTML hairstyle values unique; 23 woman-curated styles
+PASS: No duplicate HTML IDs
+PASS: Existing V1–V6 share-field ordering unchanged
+PASS: Desktop Chromium page initialization, woman choice, generation, change body preset and hair, customization filtering, randomize, reset, superhero, PNG download
+PASS: Mobile Chromium 390px: body/hair shortcuts, state updates, no horizontal overflow, no JS errors
+NOT RETESTED: Full GIF encoding/colour fidelity, live Outlook handoff and actual QR phone scanning
+
+PUBLISHING: six exact file replacements. Do not upload whole website, do not replace unchanged files.

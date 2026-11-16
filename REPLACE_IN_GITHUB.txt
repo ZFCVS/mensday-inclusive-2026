@@ -1,0 +1,61 @@
+V22 WOMEN'S BODY CONTOURS + HAIRSTYLES — COMPLETE FILE REPLACEMENTS
+Target GitHub repository: https://github.com/ZFCVS/mensday-inclusive-2026
+
+REPLACE EXACTLY THESE SIX FILES (with their entire supplied contents):
+1. block-figure.html
+2. src/block-figure.js
+3. src/block-figure.css
+4. src/block-figure-engine.mjs
+5. src/personality-character.mjs
+6. src/share-card-token.mjs
+
+These complete files include the earlier woman-selection fixes, so they work with the
+current repo even if you haven't installed the previous women's fix ZIP.
+
+HOW TO REPLACE IN GITHUB
+- Extract this ZIP on your computer.
+- Visit the repository above. For each path above, navigate to that existing file,
+  click Edit (pencil), select all of its contents, and paste the entire matching
+  extracted file. Commit the change. Keep the exact filenames and folders.
+- Alternatively, upload the files to the matching root / src paths in one commit.
+  Do NOT upload 'src' files into the repository root.
+- Do NOT delete the existing assets, GIF encoder, superhero engine, index.html,
+  or any other existing files. They are intentionally not in this patch.
+- Inspect Actions for GitHub Pages deployment; hard-refresh or use InPrivate.
+
+CHANGES
+- 7 woman-oriented body-shape presets: petite, balanced, defined waist/curved hips,
+  pear-shaped, athletic, fuller contours, and tall.
+- More prominent multi-zone curved torso, connected waist-to-hip geometry and
+  clothing geometry adjusted for cardigan, blazer, dress, and skirt.
+- 13 additional hair shapes: bob, wavy bob, lob, long waves, sleek straight,
+  high ponytail, twin braids, side braid, half-up, messy bun, curtain bangs,
+  shoulder curls, and crown braid.
+- Woman-selected editor: quick body-shape + hairstyle controls at the top;
+  hides facial-hair controls; preserves chosen silhouette during Randomize.
+- Three diverse feminine starting looks with visibly different geometry and hair.
+- Previous share-link and gender-inclusive features remain compatible.
+
+TEST CHECKLIST AFTER GITHUB DEPLOYMENT
+[ ] Woman selected -> three female-presenting designs, no beard/moustache
+[ ] Select woman card -> new Body shape & hairstyle shortcuts visible at top
+[ ] Try Hourglass, Fuller, Petite: torso/waist/hip shape visibly changes
+[ ] Try Wavy bob, Twin braids, High ponytail, Curtain bangs, Long waves
+[ ] Face and hair category and Body & proportions sliders still work
+[ ] Randomize retains feminine styling; Undo, Restore Original still work
+[ ] Man and diverse choice still generate three looks; no woman shortcuts
+[ ] PNG/GIF renders, QR scans and personalized links work
+[ ] Share Card -> Copy my greeting -> Open Outlook works
+[ ] Existing recipients' older card links still load
+[ ] Test desktop and mobile
+
+IMPLEMENTATION / VALIDATION NOTES
+- Real browser tests passed for desktop and 390px mobile with no JS page errors.
+- Generated 36 standard variations across four selections (0-2 seeds), checked
+  all 23 woman hairstyles, 7 body presets, and card-link round-trips: 66 cases.
+- Existing V1–V6 share-link field arrangements remain unchanged.
+- PNG browser download was exercised. Full 48-frame GIF creation, external QR
+  scanning, and live ZF Outlook were NOT revalidated in the current test.
+- Faces and body curves remain intentionally block-toy stylized, not smooth
+  anatomical human meshes. Appearance does not imply a person's gender.
+- No analytics/tracking code was added. Repository was not edited remotely.

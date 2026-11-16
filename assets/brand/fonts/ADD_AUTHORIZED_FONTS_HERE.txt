@@ -1,0 +1,9 @@
+ZF Prometo corporate font binaries are intentionally not distributed in this ZIP.
+
+If authorised by your organisation, put these TWO web fonts from your own approved asset source into this folder:
+  ZFPrometo_W_Lt.woff2
+  ZFPrometo_W_Md.woff2
+
+Your included src/brand-fonts.css already refers to those paths.
+Without them, the application remains functional and falls back to Arial/system fonts.
+Do not publish brand assets unless approved for public use.
